@@ -35,9 +35,9 @@ void Cell::addParticles(std::vector<vector> &particles) {
         cell_indices[i] = idx(particles[i]);
     }
 
-    thrust::sort_by_key(cell_indices.begin(),
-                        cell_indices.end(),
-                        particles.begin());
+    thrust::sort_by_key(thrust::retag<thrust::omp::tag>(cell_indices.begin()),
+                        thrust::retag<thrust::omp::tag>(cell_indices.end()),
+                        thrust::retag<thrust::omp::tag>(particles.begin()));
 
     grid[cell_indices[0]] = 0;
 
