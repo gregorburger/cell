@@ -138,22 +138,16 @@ void Cell::find_distances(std::vector<std::vector<fp> > &dists,
         if (stop <= start) {
             continue;
         }
-        std::vector<int> candidates;
+        candidates_type candidates;
         candidates.reserve(170);
         find_candidates(ci % w, ci / w, candidates);
         for (int i = start; i < stop; ++i) {
-            std::vector<fp> _d;
-            std::vector<int> _i;
-            filter_by_radius(i, candidates, _d, _i);
-            dists[i] = _d;
-            indices[i] = _i;
+            filter_by_radius(i, candidates, dists[i], indices[i]);
         }
     }
 }
 
-void Cell::find_candidates(int x, int y, std::vector<int> &candidates) const {
-    //std::vector<int> candidates;
-    //candidates.reserve(200);
+void Cell::find_candidates(int x, int y, candidates_type &candidates) const {
     int start, stop;
 
     for (int xo = -1; xo < 2; ++xo) {
@@ -161,32 +155,31 @@ void Cell::find_candidates(int x, int y, std::vector<int> &candidates) const {
             if (!idx_ok(x+xo, y+yo)) continue;
 
             cell((y+yo)*w+x+xo, &start, &stop);
-            for (int i = start; i < stop; i++) candidates.push_back(i);
+            for (int i = start; i < stop; i++) candidates.push_back(std::make_pair(particles->at(i), i));
         }
     }
-    //return candidates;
 }
 
-void Cell::filter_by_radius(int i, const std::vector<int> &candidates,
+void Cell::filter_by_radius(int i, const candidates_type &candidates,
                             std::vector<fp> &dists, std::vector<int> &indices) const {
 
     indices.reserve(30);
     dists.reserve(30);
 
     fp radius = dx*dx;
-    const vector &v_i = particles->at(i);
-    fp radiuses[candidates.size()];
+    vector v_i = particles->at(i);
 
     for (int j = 0; j < candidates.size(); ++j) {
-        const vector &v_j = particles->at(candidates[j]);
-        radiuses[j] = (v_i - v_j).length_squared();
-    }
+        const vector &v_j = candidates[j].first;
 
-    for (int j = 0; j < candidates.size(); ++j) {
-        if (radiuses[j] < radius) {
-            dists.push_back(radiuses[j]);
-            indices.push_back(candidates[j]);
-        }
+        if (__builtin_expect(std::abs(v_i.x - v_j.x) > dx || std::abs(v_i.y - v_j.y) > dx, 0)) continue;
+
+        fp r_ij = (v_i - v_j).length_squared();
+
+        if (r_ij > radius) continue;
+
+        dists.push_back(r_ij);
+        indices.push_back(candidates[j].second);
     }
 }
 

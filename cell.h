@@ -41,6 +41,8 @@ struct matrix {
 };
 
 struct Cell {
+    typedef std::vector<std::pair<vector, int> > candidates_type;
+
     Cell(fp width, fp height, fp dx);
     virtual ~Cell();
 
@@ -62,8 +64,8 @@ struct Cell {
     void cell(const vector &v, int *start, int *stop) const;
 
 
-    void find_candidates(int x, int y, std::vector<int> &candidates) const;
-    void filter_by_radius(int i, const std::vector<int> &candidates,
+    void find_candidates(int x, int y, candidates_type &candidates) const;
+    void filter_by_radius(int i, const candidates_type &candidates,
                           std::vector<fp> &dists, std::vector<int> &indices) const;
 
     int nearest(const vector &v) const;
