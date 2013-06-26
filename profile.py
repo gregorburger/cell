@@ -16,9 +16,9 @@ speedup_b = []
 speedup_f = []
 speedup_c = []
 
-ncpus = cpu_count()
+cpu_range = range(1, cpu_count())
 
-for np in range(1, ncpus):
+for np in cpu_range:
 	os.environ["OMP_NUM_THREADS"] = "%s" % np
 	p = sp.Popen("./cell", stdout=sp.PIPE)
 	#p.wait()
@@ -42,12 +42,12 @@ for np in range(1, ncpus):
 		speedup_c.append(float(complete[0]) / float(c))
 
 plt.figure()
-plt.plot(range(1, ncpus), finding)
-plt.plot(range(1, ncpus), building)
-plt.plot(range(1, ncpus), complete)
+plt.plot(cpu_range, finding)
+plt.plot(cpu_range, building)
+plt.plot(cpu_range, complete)
 plt.figure()
-plt.plot(range(1, ncpus), speedup_f)
-plt.plot(range(1, ncpus), speedup_b)
-plt.plot(range(1, ncpus), speedup_c)
-plt.plot(range(1, ncpus), range(1, ncpus))
+plt.plot(cpu_range, speedup_f)
+plt.plot(cpu_range, speedup_b)
+plt.plot(cpu_range, speedup_c)
+plt.plot(cpu_range, cpu_range)
 plt.show()
