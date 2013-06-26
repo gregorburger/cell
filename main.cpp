@@ -17,18 +17,23 @@ int main(int argc, char *argv[])
 #include <omp.h>
 
 int main(int argc, char *argv[]) {
+    int size;
+    if (argc > 1) {
+        size = atoi(argv[1]);
+    } else {
+        size = 200;
+    }
 
-    std::vector<vector> particles;
-    const int size = 4000;
     fp dx = fp(1.0)/size;
 
     Cell c(1.0, 1.0, 3*dx);
 
-    particles.reserve(size*size);
+    std::vector<vector> particles(size*size);
 
+#pragma omp parallel for
     for (int x = 0; x < size; ++x) {
         for (int y = 0; y < size; ++y) {
-            particles.push_back(vector{x*dx, y*dx});
+            particles[x*size+y] = vector{x*dx, y*dx};
         }
     }
 
