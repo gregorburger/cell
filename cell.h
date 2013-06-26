@@ -46,7 +46,7 @@ struct Cell {
     Cell(fp width, fp height, fp dx);
     virtual ~Cell();
 
-    void addParticles(std::vector<vector> &particles);
+    void add_particles(std::vector<vector> &particles);
 
     void find_distances(std::vector<std::vector<fp> > &dists,
                         std::vector<std::vector<int> > &indices) const;

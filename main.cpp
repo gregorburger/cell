@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
 
     double before = omp_get_wtime();
     std::cout << "building cell structure" << std::endl;
-    c.addParticles(particles);
+    c.add_particles(particles);
     std::cout << "done" << std::endl;
 
     double after_building = omp_get_wtime();

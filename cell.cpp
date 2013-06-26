@@ -27,7 +27,7 @@ int Cell::idx(const vector &v) const {
     return _idx;
 }
 
-void Cell::addParticles(std::vector<vector> &particles) {
+void Cell::add_particles(std::vector<vector> &particles) {
     if (cell_indices.size() != particles.size()) cell_indices.resize(particles.size());
 
 #pragma omp parallel for

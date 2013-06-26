@@ -24,7 +24,7 @@ GraphicsView::GraphicsView(QWidget *parent) :
 
     //particles[2001].x=100;
 
-    cell->addParticles(particles);
+    cell->add_particles(particles);
     render();
     fitInView(-0.1, -0.1, 1.1, 1.1, Qt::KeepAspectRatio);
 }
