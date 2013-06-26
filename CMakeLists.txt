@@ -16,5 +16,5 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto -fwhole-program -std=c++11 ${OpenM
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto -fwhole-program -fprofile-generate -std=c++11 ${OpenMP_CXX_FLAGS}")  #generate
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto -fwhole-program -fprofile-use -std=c++11 ${OpenMP_CXX_FLAGS}")  #use profile info
 
-add_executable(cell main.cpp cell.cpp graphicsview.cpp)
-target_link_libraries(cell ${QT_LIBRARIES} /usr/lib/libllalloc.a)
+add_executable(cell main.cpp cell.cpp graphicsview.cpp parallel_radix_sort.h lockless_allocator/ll_alloc.c)
+target_link_libraries(cell ${QT_LIBRARIES})
