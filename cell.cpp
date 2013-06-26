@@ -7,6 +7,7 @@
 #include <thrust/system/omp/memory.h>
 #include <algorithm>
 #include <iostream>
+#include "parallel_radix_sort.h"
 
 Cell::Cell(fp width, fp height, fp dx) : dx(dx) {
     w = std::ceil(width/dx);
@@ -37,9 +38,15 @@ void Cell::add_particles(std::vector<vector> &particles) {
         cell_indices[i] = idx(particles[i]);
     }
 
+#if 0
     thrust::sort_by_key(thrust::retag<thrust::omp::tag>(cell_indices.begin()),
                         thrust::retag<thrust::omp::tag>(cell_indices.end()),
                         thrust::retag<thrust::omp::tag>(particles.begin()));
+#else
+    int *ci_ptr = &cell_indices[0];
+    vector *p_ptr = &particles[0];
+    parallel_radix_sort::SortPairs(ci_ptr, p_ptr, particles.size());
+#endif
 
     grid[cell_indices[0]] = 0;
 
