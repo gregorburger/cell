@@ -174,8 +174,6 @@ void Cell::filter_by_radius(int i, const candidates_type &candidates,
     for (int j = 0; j < candidates.size(); ++j) {
         const vector &v_j = candidates[j].first;
 
-        if (__builtin_expect(std::abs(v_i.x - v_j.x) > dx || std::abs(v_i.y - v_j.y) > dx, 0)) continue;
-
         fp r_ij = (v_i - v_j).length_squared();
 
         if (r_ij > radius) continue;
