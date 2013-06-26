@@ -3,6 +3,8 @@
 #include <thrust/sort.h>
 #include <thrust/fill.h>
 #include <thrust/scan.h>
+#include <thrust/iterator/retag.h>
+#include <thrust/system/omp/memory.h>
 #include <algorithm>
 #include <iostream>
 
