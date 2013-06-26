@@ -2,6 +2,7 @@ import os
 import subprocess as sp
 import locale
 import matplotlib.pyplot as plt
+from multiprocessing import cpu_count
 
 encoding = locale.getdefaultlocale()[1]
 
@@ -15,7 +16,9 @@ speedup_b = []
 speedup_f = []
 speedup_c = []
 
-for np in [1, 2, 3, 4, 5, 6, 7, 8]:
+ncpus = cpu_count()
+
+for np in range(1, ncpus):
 	os.environ["OMP_NUM_THREADS"] = "%s" % np
 	p = sp.Popen("./cell", stdout=sp.PIPE)
 	#p.wait()
@@ -39,12 +42,12 @@ for np in [1, 2, 3, 4, 5, 6, 7, 8]:
 		speedup_c.append(float(complete[0]) / float(c))
 
 plt.figure()
-plt.plot(range(1,9), finding)
-plt.plot(range(1,9), building)
-plt.plot(range(1,9), complete)
+plt.plot(range(1, ncpus), finding)
+plt.plot(range(1, ncpus), building)
+plt.plot(range(1, ncpus), complete)
 plt.figure()
-plt.plot(range(1,9), speedup_f)
-plt.plot(range(1,9), speedup_b)
-plt.plot(range(1,9), speedup_c)
-plt.plot(range(1,9), [1,2,3,4,5,6,7,8])
+plt.plot(range(1, ncpus), speedup_f)
+plt.plot(range(1, ncpus), speedup_b)
+plt.plot(range(1, ncpus), speedup_c)
+plt.plot(range(1, ncpus), range(1, ncpus))
 plt.show()
