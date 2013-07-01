@@ -3,8 +3,8 @@ project(cell)
 
 set(CMAKE_AUTOMOC TRUE)
 
-include(CheckCCompilerFlag)
-check_c_compiler_flag(-std=c++11 HAS_CXX11 REQUIRED)
+include(CheckCXXCompilerFlag)
+check_cxx_compiler_flag(-std=c++11 HAS_CXX11 REQUIRED)
 
 if (HAS_CXX11)
     message(STATUS "compiler features full C++11")
