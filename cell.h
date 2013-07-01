@@ -3,15 +3,18 @@
 
 #include <vector>
 #include <cassert>
+#include <cmath>
 
 typedef float fp;
 
 struct vector {
+    vector() {}
+    vector(fp x, fp y) : x(x), y(y) {}
     fp x, y;
 
     inline
     vector operator-(const vector &other) const {
-        return vector{x-other.x, y-other.y};
+        return vector(x-other.x, y-other.y);
     }
 
     inline
@@ -20,24 +23,45 @@ struct vector {
     }
 };
 
-template <typename T>
-struct matrix {
-    matrix(int width, int height) : w(width), h(height) {
-        data = new int[width*height];
+inline
+fp dist_squared(const vector &u, const vector &v) {
+    fp x = u.x - v.x;
+    fp y = u.y - v.y;
+    return x*x+y*y;
+}
+
+struct soa_vectors {
+    soa_vectors(std::size_t size) : x(size), y(size) {
     }
 
-    virtual ~matrix() {
-        delete[] data;
+    soa_vectors() : x(0), y(0) {
     }
 
-    T &operator()(int x, int y) {
-        assert(x < w);
-        assert(y < h);
-        return data[y*w + x];
+    inline
+    std::size_t size() const {
+        return x.size();
     }
 
-    int w, h;
-    T *data;
+    std::vector<fp> x;
+    std::vector<fp> y;
+};
+
+struct soa_candidates {
+    std::vector<fp> x, y;
+    soa_vectors vectors;
+    std::vector<int> indices;
+
+    inline
+    void reserve(std::size_t size) {
+        indices.reserve(size);
+        x.reserve(size);
+        y.reserve(size);
+    }
+
+    inline
+    std::size_t size() const {
+        return x.size();
+    }
 };
 
 struct Cell {
@@ -46,7 +70,7 @@ struct Cell {
     Cell(fp width, fp height, fp dx);
     virtual ~Cell();
 
-    void add_particles(std::vector<vector> &particles);
+    void add_particles(soa_vectors &particles);
 
     void find_distances(std::vector<std::vector<fp> > &dists,
                         std::vector<std::vector<int> > &indices) const;
@@ -64,8 +88,10 @@ struct Cell {
     void cell(const vector &v, int *start, int *stop) const;
 
 
-    void find_candidates(int x, int y, candidates_type &candidates) const;
-    void filter_by_radius(int i, const candidates_type &candidates,
+    //void find_candidates(int x, int y, candidates_type &candidates) const;
+    void find_candidates(int x, int y, soa_candidates &candidates) const;
+
+    void filter_by_radius(int i, const soa_candidates &candidates,
                           std::vector<fp> &dists, std::vector<int> &indices) const;
 
     int nearest(const vector &v) const;
@@ -77,12 +103,27 @@ struct Cell {
         return true;
     }
 
+    inline
+    fp dist_squared(std::size_t i, std::size_t j) const {
+        fp x = particles->x[i] - particles->x[j];
+        fp y = particles->y[i] - particles->y[j];
+        return x*x+y*y;
+    }
+
+    inline
+    fp dist_squared(std::size_t i, vector v) const {
+        fp x = particles->x[i] - v.x;
+        fp y = particles->y[i] - v.y;
+        return std::sqrt(x*x+y*y);
+    }
+
     fp dx;
     int w, h;
-    int *grid;
+    std::vector<int> grid;
 
     int idx(const vector &v) const;
-    std::vector<vector> *particles;
+    int idx(std::size_t i) const;
+    soa_vectors *particles;
     std::vector<int> cell_indices;
 };
 

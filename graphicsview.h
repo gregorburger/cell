@@ -21,8 +21,11 @@ private:
     void render();
     QGraphicsScene *scene;
     Cell *cell;
-    std::vector<vector> particles = std::vector<vector>(1000);
-    std::vector<vector> nb;
+    soa_vectors particles;
+    int selected = -1;
+    int in_cell = -1;
+    std::vector<std::vector<fp> > dists;
+    std::vector<std::vector<int> > indices;
 };
 
 #endif // GRAPHICSVIEW_H

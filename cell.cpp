@@ -9,17 +9,15 @@
 #include <iostream>
 #include "parallel_radix_sort.h"
 
-Cell::Cell(fp width, fp height, fp dx) : dx(dx) {
-    w = std::ceil(width/dx);
-    h = std::ceil(height/dx);
+Cell::Cell(fp width, fp height, fp dx)
+    : dx(dx), w(std::ceil(width/dx)), h(std::ceil(height/dx)),
+      grid(w * h) {
 
-    grid = new int[w * h];
     thrust::fill(&grid[0], &grid[w * h - 1], 0);
 }
 
 Cell::~Cell() {
-    delete[] grid;
- }
+}
 
 int Cell::idx(const vector &v) const {
     assert(v.x >= 0 && v.x <= w*dx);
@@ -30,18 +28,27 @@ int Cell::idx(const vector &v) const {
     return _idx;
 }
 
-void Cell::add_particles(std::vector<vector> &particles) {
+int Cell::idx(std::size_t i) const {
+    int _idx = int(particles->y[i]/dx)*w + int(particles->x[i]/dx);
+    assert(_idx < w * h);
+    assert(_idx >= 0);
+    return _idx;
+}
+
+void Cell::add_particles(soa_vectors &particles) {
     if (cell_indices.size() != particles.size()) cell_indices.resize(particles.size());
+    this->particles = &particles;
 
 #pragma omp parallel for
     for (std::size_t i = 0; i < particles.size(); ++i) {
-        cell_indices[i] = idx(particles[i]);
+        //cell_indices[i] = idx(particles[i]);
+        cell_indices[i] = idx(i);
     }
 
-#if 0
+#if 1
     thrust::sort_by_key(thrust::retag<thrust::omp::tag>(cell_indices.begin()),
                         thrust::retag<thrust::omp::tag>(cell_indices.end()),
-                        thrust::retag<thrust::omp::tag>(particles.begin()));
+                        thrust::retag<thrust::omp::tag>(thrust::make_zip_iterator(thrust::make_tuple(particles.x.begin(), particles.y.begin()))));
 #else
     int *ci_ptr = &cell_indices[0];
     vector *p_ptr = &particles[0];
@@ -56,22 +63,6 @@ void Cell::add_particles(std::vector<vector> &particles) {
             grid[cell_indices[i]] = i;
         }
     }
-#if 0
-    int start = 0;
-
-    for (int i = 1; i < w*h; ++i) {
-        int stop = grid[i];
-        int _idx = cell_indices[start];
-        assert(cell_indices[stop] != cell_indices[stop - 1]);
-
-        for (int j = start; j < stop; ++j) {
-            assert(_idx == cell_indices[j]);
-        }
-        start = stop;
-    }
-#endif
-
-    this->particles = &particles;
 }
 
 void Cell::cell(int _idx, int *start, int *stop) const {
@@ -98,11 +89,107 @@ std::vector<vector> Cell::nb(const vector &v) const {
     int start, stop;
     cell(v, &start, &stop);
 
+    fp dist = dx/2.0*dx/2.0;
+
     for (int i = start; i < stop; ++i) {
-        nb.push_back(particles->at(i));
+        vector u(vector(particles->x[i], particles->y[i]));
+        fp r_ij = (u-v).length_squared();
+        if (r_ij <= dist)
+            nb.push_back(u);
     }
 
     return nb;
+}
+
+
+void Cell::find_distances(std::vector<std::vector<fp> > &dists,
+                          std::vector<std::vector<int> > &indices) const {
+    //hopefully resize checks wheather the resize is silly or not
+    dists.resize(particles->size());
+    indices.resize(particles->size());
+
+#pragma omp parallel for
+    for (int ci = 0; ci < grid.size(); ++ci) {
+        int start, stop;
+        cell(ci, &start, &stop);
+        if (stop <= start) {
+            continue;
+        }
+        soa_candidates candidates;
+        candidates.reserve(170);
+        int x = ci % w;
+        int y = ci / w;
+        find_candidates(x, y, candidates);
+        for (int i = start; i < stop; ++i) {
+            filter_by_radius(i, candidates, dists[i], indices[i]);
+        }
+    }
+}
+
+void Cell::find_candidates(int x, int y, soa_candidates &candidates) const {
+    int start, stop;
+
+    for (int yo = -1; yo < 2; ++yo) {
+        for (int xo = -1; xo < 2; ++xo) {
+            if (!idx_ok(x+xo, y+yo)) continue;
+
+            cell((y+yo)*w+x+xo, &start, &stop);
+
+            for (int i = start; i < stop; i++) {
+                candidates.indices.push_back(i);
+                candidates.x.push_back(particles->x[i]);
+                candidates.y.push_back(particles->y[i]);
+            }
+        }
+    }
+}
+
+
+//#define WITHOUT_BRANCH
+
+typedef void(*callback)(fp dist, int idx, std::vector<fp> &dists, std::vector<int> &indices);
+
+void bad(fp dist, int idx, std::vector<fp> &dists, std::vector<int> &indices) {
+
+}
+
+void good(fp dist, int idx, std::vector<fp> &dists, std::vector<int> &indices) {
+    dists.push_back(dist);
+    indices.push_back(idx);
+}
+
+void Cell::filter_by_radius(int i, const soa_candidates &candidates,
+                            std::vector<fp> &dists, std::vector<int> &indices) const {
+
+    indices.reserve(30);
+    dists.reserve(30);
+
+    fp radius = dx/2.0*dx/2.0;
+
+    for (int j = 0; j < candidates.size(); ++j) {
+        //fp r_ij = (v_i - v_j).length_squared();
+        fp r_ij = dist_squared(i, candidates.indices[j]);
+        if (r_ij > radius) continue;
+        dists.push_back(r_ij);
+        indices.push_back(candidates.indices[j]);
+    }
+}
+
+int Cell::nearest(const vector &v) const {
+    int start, stop;
+    cell(v, &start, &stop);
+
+    int _nearest = start;
+    fp dist = dist_squared(start, v);
+
+    for (int i = start+1; i < stop; ++i) {
+        fp ndist = dist_squared(i, v);
+        if (ndist < dist) {
+            dist = ndist;
+            _nearest = i;
+        }
+    }
+    return _nearest;
 }
 
 void Cell::flatten(const std::vector<std::vector<fp> > &dists, const std::vector<std::vector<int> > &indices,
@@ -132,77 +219,4 @@ void Cell::flatten(const std::vector<std::vector<fp> > &dists, const std::vector
             (*flatten_indices)[start + j] = _i[j];
         }
     }
-}
-
-void Cell::find_distances(std::vector<std::vector<fp> > &dists,
-                          std::vector<std::vector<int> > &indices) const {
-    //hopefully resize checks wheather the resize is silly or not
-    dists.resize(particles->size());
-    indices.resize(particles->size());
-
-#pragma omp parallel for
-    for (int ci = 0; ci < w*h; ++ci) {
-        int start, stop;
-        cell(ci, &start, &stop);
-        if (stop <= start) {
-            continue;
-        }
-        candidates_type candidates;
-        candidates.reserve(170);
-        find_candidates(ci % w, ci / w, candidates);
-        for (int i = start; i < stop; ++i) {
-            filter_by_radius(i, candidates, dists[i], indices[i]);
-        }
-    }
-}
-
-void Cell::find_candidates(int x, int y, candidates_type &candidates) const {
-    int start, stop;
-
-    for (int xo = -1; xo < 2; ++xo) {
-        for (int yo = -1; yo < 2; ++yo) {
-            if (!idx_ok(x+xo, y+yo)) continue;
-
-            cell((y+yo)*w+x+xo, &start, &stop);
-            for (int i = start; i < stop; i++) candidates.push_back(std::make_pair(particles->at(i), i));
-        }
-    }
-}
-
-void Cell::filter_by_radius(int i, const candidates_type &candidates,
-                            std::vector<fp> &dists, std::vector<int> &indices) const {
-
-    indices.reserve(30);
-    dists.reserve(30);
-
-    fp radius = dx*dx;
-    vector v_i = particles->at(i);
-
-    for (int j = 0; j < candidates.size(); ++j) {
-        const vector &v_j = candidates[j].first;
-
-        fp r_ij = (v_i - v_j).length_squared();
-
-        if (r_ij > radius) continue;
-
-        dists.push_back(r_ij);
-        indices.push_back(candidates[j].second);
-    }
-}
-
-int Cell::nearest(const vector &v) const {
-    int start, stop;
-    cell(v, &start, &stop);
-
-    int _nearest = start;
-    fp dist = (particles->at(start) - v).length_squared();
-
-    for (int i = start+1; i < stop; ++i) {
-        fp ndist = (particles->at(i) - v).length_squared();
-        if (ndist < dist) {
-            dist = ndist;
-            _nearest = i;
-        }
-    }
-    return _nearest;
 }

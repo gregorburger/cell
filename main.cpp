@@ -1,3 +1,4 @@
+//#define GUI
 #ifdef GUI
 #include "graphicsview.h"
 #include <QApplication>
@@ -21,19 +22,19 @@ int main(int argc, char *argv[]) {
     if (argc > 1) {
         size = atoi(argv[1]);
     } else {
-        size = 200;
+        size = 2200;
     }
-
     fp dx = fp(1.0)/size;
 
     Cell c(1.0, 1.0, 3*dx);
 
-    std::vector<vector> particles(size*size);
+    soa_vectors particles(size*size);
 
 #pragma omp parallel for
     for (int x = 0; x < size; ++x) {
         for (int y = 0; y < size; ++y) {
-            particles[x*size+y] = vector{x*dx, y*dx};
+            particles.x[x*size+y] = x*dx;
+            particles.y[x*size+y] = y*dx;
         }
     }
 
@@ -44,11 +45,11 @@ int main(int argc, char *argv[]) {
 
     double after_building = omp_get_wtime();
 
-    std::vector<std::vector<fp> > *dists = new std::vector<std::vector<fp> >();
-    std::vector<std::vector<int> > *indices = new std::vector<std::vector<int> >();
+    std::vector<std::vector<fp> > dists;
+    std::vector<std::vector<int> > indices;
 
     std::cout << "finding neighbors" << std::endl;
-    c.find_distances(*dists, *indices);
+    c.find_distances(dists, indices);
     std::cout << "done" << std::endl;
 
     double after_finding = omp_get_wtime();
@@ -74,13 +75,13 @@ int main(int argc, char *argv[]) {
     int max = 0;
     int min = 300;
 #pragma omp parallel for reduction(+: sum) reduction(max: max) reduction(min: min)
-    for (int i = 0; i < indices->size(); ++i) {
-        int nb = indices->at(i).size();
+    for (int i = 0; i < dists.size(); ++i) {
+        int nb = dists[i].size();
         sum += nb;
         max = std::max(max, nb);
         min = std::min(min, nb);
     }
-    std::cout << "average nb size " << sum/indices->size() << std::endl;
+    std::cout << "average nb size " << sum/dists.size() << std::endl;
     std::cout << "max nb size " << max << std::endl;
     std::cout << "min nb size " << min << std::endl;
 #endif
